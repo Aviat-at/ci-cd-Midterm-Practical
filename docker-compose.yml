@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  mysql-db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: employees
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./test_db:/docker-entrypoint-initdb.d  # Mounts SQL files
+      - ./init-script.sh:/docker-entrypoint-initdb.d/init-script.sh  # Custom script
+    ports:
+      - "3306:3306"
+    command: ["mysqld", "--default-authentication-plugin=mysql_native_password"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+
+  flask-app:
+    build: ./app
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ENV: development
+
+volumes:
+  mysql_data:
